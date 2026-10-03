@@ -11,7 +11,7 @@ langgraph
 tavily-python
 
 # Vector DB & Hybrid Search + Re-ranking
-pinecone-client
+pinecone
 rank_bm25
 cohere
 tiktoken
