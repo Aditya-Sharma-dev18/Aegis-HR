@@ -16,7 +16,7 @@ pinecone-text==0.8.0  # For Sparse Vectors (BM25/SPLADE)
 cohere==5.1.8         # For Cross-Encoder Re-ranking
 tiktoken==0.6.0
 
-# Production Database (Replacing SQLite)
+# Production Database 
 sqlalchemy==2.0.29
 asyncpg==0.29.0       # Async PostgreSQL driver
 alembic==1.13.1       # Database migrations
