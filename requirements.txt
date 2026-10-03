@@ -1,30 +1,30 @@
 # Web Framework & Server
-fastapi==0.110.0
-uvicorn[standard]==0.27.1
-pydantic==2.6.4
-pydantic-settings==2.2.1
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
 
 # AI & Orchestration (Agentic RAG)
-langchain==0.1.13
-langchain-openai==0.1.1
-langgraph==0.0.30
-tavily-python==0.3.3
+langchain
+langchain-groq
+langgraph
+tavily-python
 
 # Vector DB & Hybrid Search + Re-ranking
-pinecone-client==3.2.2
-pinecone-text==0.8.0  # For Sparse Vectors (BM25/SPLADE)
-cohere==5.1.8         # For Cross-Encoder Re-ranking
-tiktoken==0.6.0
+pinecone-client
+rank_bm25
+cohere
+tiktoken
 
-# Production Database 
-sqlalchemy==2.0.29
-asyncpg==0.29.0       # Async PostgreSQL driver
-alembic==1.13.1       # Database migrations
+# Production Database (Replacing SQLite)
+sqlalchemy
+asyncpg
+alembic
 
 # Security & Auth
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.9
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
 
 # Environment
-python-dotenv==1.0.1
+python-dotenv
