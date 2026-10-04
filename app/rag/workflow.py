@@ -30,7 +30,7 @@ def generate(state: State):
     """
     print("---NODE: GENERATE ANSWER---")
     
-    # FIX: Use .get() here too
+   
     question = state.get("question", "")
     documents = state.get("documents", [])
 
