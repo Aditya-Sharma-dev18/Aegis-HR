@@ -1,13 +1,14 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 from pydantic import BaseModel
+from langchain_core.documents import Document
 
-class State(BaseModel):
+class State(TypedDict, total=False):
     """ 
     Represents the state of the application, including user information and other relevant data.
     """
     question:str
-    answer:str
-    user_clearnce:int
+    generation:str
+    user_clearance:int
     user_department:str
-    documents:List[Documents]
+    documents:List[Document]
     web_fallback:bool
