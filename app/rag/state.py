@@ -7,8 +7,19 @@ class State(TypedDict, total=False):
     Represents the state of the application, including user information and other relevant data.
     """
     question:str
-    generation:str
-    user_clearance:int
-    user_department:str
-    documents:List[Document]
-    web_fallback:bool
+    current_query:str
+    kb_docs:List[Document]
+    kb_grade:str
+    web_grade:str
+    answer:str
+    source_used:str
+    trace:List[str]
+    citations:str
+    retry_count:int
+
+
+
+
+
+
+
