@@ -9,6 +9,9 @@ from app.rag.state import State
 from langchain_core.documents import Document
 from app.core.config import settings
 from langchain_core.prompts import ChatPromptTemplate
+from langgraph.checkpoint.postgres import PostgresSaver
+from psycopg_pool import ConnectionPool
+import os
 
 model= ChatGroq(
     model="openai/gptoss-120b",
@@ -233,8 +236,18 @@ workflow.add_conditional_edges(
 workflow.add_edge("generate", END)
 workflow.add_edge("fallback", END)
 
-# Compile
-rag_app = workflow.compile()
+
+
+
+DB_URI = settings.DATABASE_URL
+connection_pool = ConnectionPool(
+    conninfo=DB_URI,
+    max_size=20,
+    kwargs={"autocommit": True}
+)
+memory = PostgresSaver(connection_pool)
+memory.setup()
+rag_app = workflow.compile(checkpointer=memory)
 
 
 
@@ -243,59 +256,3 @@ rag_app = workflow.compile()
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def web_search_tool():
-    client=TavilySearch(api_key=settings.TAVILY_API_KEY,max_results=5,include_answers=True,include_raw_content=True)
-    return client

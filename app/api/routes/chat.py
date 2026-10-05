@@ -23,7 +23,7 @@ async def ask_question(request: ChatRequest, current_user: User = Depends(get_cu
     
     try:
         # Run the AI graph
-        result = rag_app.invoke(inputs)
+        result = await rag_app.ainvoke(inputs,config=thread_config)
         
         # DEBUG LOG: Print exactly what the AI brain returned
         print(f"🧠 LangGraph Final Output: {result}")
