@@ -11,7 +11,7 @@ class ChatRequest(BaseModel):
 @router.post("/ask")
 async def ask_question(request: ChatRequest, current_user: User = Depends(get_current_user)):
     """
-    Secure Chat Endpoint: Automatically applies the user's clearance level.
+    Secure Chat Endpoint with Memory and Routing.
     """
     print(f"\n🕵️ User {current_user.username} (Clearance {current_user.clearance}) is asking: {request.question}")
     
@@ -22,13 +22,15 @@ async def ask_question(request: ChatRequest, current_user: User = Depends(get_cu
     }
     
     try:
-        # Run the AI graph
-        result = await rag_app.ainvoke(inputs,config=thread_config)
+        # 1. CREATE THE THREAD CONFIG (This was missing!)
+        # Using the username as the unique thread_id for Postgres Memory
+        thread_config = {"configurable": {"thread_id": current_user.username}}
         
-        # DEBUG LOG: Print exactly what the AI brain returned
+        # 2. Run the graph asynchronously with the config
+        result =  rag_app.invoke(inputs, config=thread_config)
+        
         print(f"🧠 LangGraph Final Output: {result}")
         
-        # SAFELY get the generation key
         answer = result.get("generation", "Error: No answer was generated. Check terminal logs.")
         
         return {
@@ -36,7 +38,8 @@ async def ask_question(request: ChatRequest, current_user: User = Depends(get_cu
             "answer": answer,
             "security_context": {
                 "user": current_user.username,
-                "clearance_applied": current_user.clearance
+                "clearance_applied": current_user.clearance,
+                "thread_id": current_user.username
             }
         }
     except Exception as e:

@@ -5,6 +5,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_community.tools.tavily_search import TavilySearchResults
 from app.rag.retriever import get_secure_reteriver 
 from app.schemas import routequery,gradedocuments
+from app.rag.retriever import get_secure_vectorstore
 from app.rag.state import State
 from langchain_core.documents import Document
 from app.core.config import settings
@@ -14,8 +15,8 @@ from psycopg_pool import ConnectionPool
 import os
 
 model= ChatGroq(
-    model="openai/gptoss-120b",
-    api_key=settings.OPENAI_API_KEY,
+    model="openai/gpt-oss-120b",
+    api_key=settings.GROQ_API_KEY,
    )
 
 
@@ -41,19 +42,26 @@ grader_prompt = ChatPromptTemplate.from_messages([
 grader_chain = grader_prompt | retrieval_grader
 
 
-
-def retrieve(state:State):
-    """ 
-    Retrieves documents based on the user's question and applies a relevance grading step.
-    """
-    question = state.get("question","")
-    clearance = state.get("user_clearance",1)
-    retriever = get_secure_reteriver(clearance)
-    documents = retriever.get_relevant_documents(question)
-
-    trace=state.get("trace",[])
-    trace.append("retrieval step completed")
-    return {"kb_docs": documents, "trace": trace,"question":question,"source_used":"kb"}
+def retrieve(state: State):
+    """Node 3: Fetch from Pinecone with RBAC Security"""
+    print("---NODE: RETRIEVE FROM PINECONE---")
+    question = state.get("question", "")
+    clearance = state.get("user_clearance", 1) 
+    
+    # Get the vectorstore and query it directly (bypassing the buggy retriever class)
+    vectorstore = get_secure_vectorstore()
+    rbac_filter = {"clearance": {"$lte": clearance}}
+    
+    documents = vectorstore.similarity_search(
+        query=question, 
+        k=3, 
+        filter=rbac_filter
+    )
+    
+    trace = state.get("trace", [])
+    trace.append("Searched Pinecone KB")
+    
+    return {"kb_docs": documents, "question": question, "trace": trace, "source_used": "Knowledge Base"}
        
 def web_search(state:State):
     """ 
@@ -174,7 +182,7 @@ def route_question(state:State):
     if source.datasource=="web":
         return "web_search"
     else:
-        return "reterieve_kb"
+        return "retrieve_kb"
 
 def decide_to_generate(state:State):
     """ 
