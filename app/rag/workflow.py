@@ -2,7 +2,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from app.rag.retriever import get_secure_reteriver  # Assuming you spelled it 'reteriver' in your file
+from app.rag.retriever import get_secure_reteriver  
 from app.rag.state import State
 from app.core.config import settings
 
