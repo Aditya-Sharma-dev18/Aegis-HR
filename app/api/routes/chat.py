@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from fastapi_limiter.depends import RateLimiter
+
 from app.services.auth import get_current_user, User
 from app.rag.workflow import rag_app
 
@@ -8,10 +10,11 @@ router = APIRouter()
 class ChatRequest(BaseModel):
     question: str
 
-@router.post("/ask")
+
+@router.post("/ask", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
 async def ask_question(request: ChatRequest, current_user: User = Depends(get_current_user)):
     """
-    Secure Chat Endpoint with Memory and Routing.
+    Secure Chat Endpoint with Memory, Routing, and Rate Limiting.
     """
     print(f"\n🕵️ User {current_user.username} (Clearance {current_user.clearance}) is asking: {request.question}")
     
@@ -22,12 +25,12 @@ async def ask_question(request: ChatRequest, current_user: User = Depends(get_cu
     }
     
     try:
-        # 1. CREATE THE THREAD CONFIG (This was missing!)
+        # 1. CREATE THE THREAD CONFIG
         # Using the username as the unique thread_id for Postgres Memory
         thread_config = {"configurable": {"thread_id": current_user.username}}
         
-        # 2. Run the graph asynchronously with the config
-        result =  rag_app.invoke(inputs, config=thread_config)
+        # 2. Run the graph synchronously with the config
+        result = rag_app.invoke(inputs, config=thread_config)
         
         print(f"🧠 LangGraph Final Output: {result}")
         
