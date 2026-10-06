@@ -7,16 +7,20 @@ pydantic-settings
 # AI & Orchestration (Agentic RAG)
 langchain
 langchain-groq
+langchain-tavily
 langgraph
-tavily-python
+langgraph-checkpoint-postgres
 
 # Vector DB & Hybrid Search + Re-ranking
+langchain-pinecone
+langchain-cohere
 pinecone
 rank_bm25
 cohere
 tiktoken
 
-# Production Database (Replacing SQLite)
+# Async Postgres (LangGraph Memory + Future ORM)
+psycopg[binary,pool]
 sqlalchemy
 asyncpg
 alembic
@@ -25,6 +29,10 @@ alembic
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+
+# Rate Limiting
+redis
+fastapi-limiter
 
 # Environment
 python-dotenv
