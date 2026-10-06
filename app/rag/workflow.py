@@ -2,8 +2,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_community.tools.tavily_search import TavilySearchResults
-from app.rag.retriever import get_secure_reteriver 
+from langchain_tavily import TavilySearch
 from app.schemas import routequery,gradedocuments
 from app.rag.retriever import get_secure_vectorstore
 from app.rag.state import State
@@ -63,17 +62,21 @@ def retrieve(state: State):
     
     return {"kb_docs": documents, "question": question, "trace": trace, "source_used": "Knowledge Base"}
        
-def web_search(state:State):
-    """ 
+def web_search(state: State):
+    """
     Performs a web search based on the user's question and applies a relevance grading step.
     """
-    question=state.get("question","")
-    trace=state.get("trace",[])
+    question = state.get("question", "")
+    trace = state.get("trace", [])
     trace.append("web search step completed")
-    tool=TavilSearchResults(max_results=5,include_answers=True,include_raw_content=True)
-    docs=tool.invoke({"query":question})
-    web_results="/n".join(d["content"] for d in docs)
-    web_docs=[Document(page_content=web_results)]
+
+    tool = TavilySearch(max_results=5, include_answers=True, include_raw_content=True,api_key=settings.TAVILY_API_KEY.get_secret_value())
+    docs = tool.invoke({"query": question})
+
+    web_results = "\n".join(d.get("content", "") for d in docs if isinstance(d, dict) and d.get("content"))
+    web_docs = [Document(page_content=web_results)] if web_results else []
+
+    return {"web_docs": web_docs, "trace": trace, "source_used": "Web"}
 
 
 def grade_documents(state:State):
