@@ -4,11 +4,15 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_tavily import TavilySearch
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
+from cohere import AsyncClientV2
 
 from app.schemas import routequery, gradedocuments
-from app.rag.retriever import get_secure_vectorstore
+from app.rag.retriever import get_secure_vectorstore, run_bm25_search
 from app.rag.state import State
 from app.core.config import settings
+
+cohere_client = AsyncClientV2(api_key=settings.COHERE_API_KEY.get_secret_value())
 
 
 # ==========================================
@@ -51,25 +55,45 @@ generate_chain = generate_prompt | model | StrOutputParser()
 # 2. ASYNC GRAPH NODES
 # ==========================================
 async def retrieve(state: State):
-    """Node: Fetch from Pinecone with RBAC Security"""
-    print("---NODE: RETRIEVE FROM PINECONE---")
+    """Node: Hybrid Search (Pinecone Dense + BM25 RRF) with RBAC + Async Cohere Reranking"""
+    print("---NODE: HYBRID RETRIEVE (PINECONE + BM25) & COHERE RERANK---")
     question = state.get("question", "")
     clearance = state.get("user_clearance", 1)
 
     vectorstore = get_secure_vectorstore()
     rbac_filter = {"clearance": {"$lte": clearance}}
 
-    # Async similarity search — does NOT block the event loop
-    documents = await vectorstore.asimilarity_search(
+    # Stage 1: Wide Net Dense Retrieval from Pinecone with strict RBAC filter (k=15)
+    dense_docs = await vectorstore.asimilarity_search(
         query=question,
-        k=3,
+        k=15,
         filter=rbac_filter
     )
 
-    trace = state.get("trace", [])[:]  # Copy to avoid mutating shared state
-    trace.append("Searched Pinecone KB")
+    trace = state.get("trace", [])[:]
 
-    return {"kb_docs": documents, "question": question, "trace": trace, "source_used": "Knowledge Base"}
+    if not dense_docs:
+        trace.append("Searched Pinecone KB (0 docs matched RBAC/query)")
+        return {"kb_docs": [], "question": question, "trace": trace, "source_used": "Knowledge Base"}
+
+    # Stage 2: BM25 Lexical Scoring + Reciprocal Rank Fusion (RRF) -> Top 10 Hybrid Docs
+    hybrid_docs = run_bm25_search(query=question, candidate_docs=dense_docs, top_k=10)
+
+    # Stage 3: Cohere Cross-Encoder Reranking -> Top 3 Precision Docs
+    doc_texts = [doc.page_content for doc in hybrid_docs]
+    rerank_response = await cohere_client.rerank(
+        model="rerank-english-v3.0",
+        query=question,
+        documents=doc_texts,
+        top_n=3
+    )
+
+    reranked_docs = [hybrid_docs[hit.index] for hit in rerank_response.results]
+    trace.append(
+        f"Hybrid Search: Pinecone ({len(dense_docs)}) + BM25 RRF ({len(hybrid_docs)}) -> Cohere Reranked (Top {len(reranked_docs)})"
+    )
+
+    return {"kb_docs": reranked_docs, "question": question, "trace": trace, "source_used": "Knowledge Base"}
 
 
 async def web_search(state: State):
@@ -156,6 +180,7 @@ async def generate(state: State):
     # Try KB docs first; if empty (web flow), use web_docs
     documents = state.get("kb_docs", []) or state.get("web_docs", [])
     source = state.get("source_used", "Unknown")
+    chat_history = state.get("messages", [])  # Retrieve chat history if available
 
     if not documents:
         return {"generation": "I do not have clearance or information to answer this."}
@@ -163,10 +188,17 @@ async def generate(state: State):
     docs_text = "\n".join([doc.page_content for doc in documents])
 
     # Async LLM call — does NOT block the event loop
-    answer = await generate_chain.ainvoke({"context": docs_text, "question": question})
+    answer = await generate_chain.ainvoke({"context": docs_text, "question": question, "chat_history": chat_history})
 
     final_answer = f"{answer} \n\n*(Source: {source})*"
-    return {"generation": final_answer}
+
+    return {
+        "generation": final_answer,
+        "messages": [
+            HumanMessage(content=question),
+            AIMessage(content=final_answer)
+        ]
+    }
 
 
 # ==========================================

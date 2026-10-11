@@ -1,5 +1,7 @@
-from typing import List, Optional, TypedDict
+from typing import List, Optional, TypedDict ,Annotated
 from langchain_core.documents import Document
+from langgraph.graph.message import add_messages
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 
 class State(TypedDict, total=False):
     """
@@ -11,6 +13,7 @@ class State(TypedDict, total=False):
     current_query: str
     user_clearance: int
     user_department: str
+    
 
     # --- Knowledge Base Path ---
     kb_docs: List[Document]
@@ -28,3 +31,4 @@ class State(TypedDict, total=False):
     trace: List[str]
     citations: str
     retry_count: int
+    messages: Annotated[List[BaseMessage], add_messages]
