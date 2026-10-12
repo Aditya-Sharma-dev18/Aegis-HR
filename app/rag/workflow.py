@@ -66,7 +66,7 @@ async def retrieve(state: State):
     # Stage 1: Wide Net Dense Retrieval from Pinecone with strict RBAC filter (k=15)
     dense_docs = await vectorstore.asimilarity_search(
         query=question,
-        k=15,
+        k=20,
         filter=rbac_filter
     )
 
