@@ -85,7 +85,7 @@ async def retrieve(state: State):
         model="rerank-english-v3.0",
         query=question,
         documents=doc_texts,
-        top_n=4
+        top_n=3
     )
 
     reranked_docs = [hybrid_docs[hit.index] for hit in rerank_response.results]
