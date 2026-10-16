@@ -4,15 +4,48 @@ import redis.asyncio as redis
 from fastapi_limiter import FastAPILimiter
 from psycopg_pool import AsyncConnectionPool
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.api.routes import auth, chat
 from app.rag.workflow import build_rag_app
 
+# 👇 Auth & Database Imports (Checklist Point #4)
+from app.core.database import Base, engine, SessionLocal, UserModel
+from app.services.auth import get_password_hash
+
+def init_db_and_seed_users():
+    """Creates PostgreSQL tables and seeds default RBAC test accounts if empty."""
+    # Create the 'users' table if it doesn't exist
+    Base.metadata.create_all(bind=engine)
+    
+    with SessionLocal() as db:
+        # Check if 'aditya' exists, if not seed the initial users
+        if not db.scalar(select(UserModel).where(UserModel.username == "aditya")):
+            db.add_all([
+                UserModel(
+                    username="aditya",
+                    hashed_password=get_password_hash("admin123"),
+                    clearance=5,
+                    department="Executive"
+                ),
+                UserModel(
+                    username="intern_bob",
+                    hashed_password=get_password_hash("bob123"),
+                    clearance=1,
+                    department="Engineering"
+                ),
+            ])
+            db.commit()
+            print("🔐 PostgreSQL Users Table Initialized & Seeded with bcrypt hashes!")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
+
+    # 0. Initialize Auth Database and Seed Users
+    init_db_and_seed_users()
 
     # 1. Initialize Redis Rate Limiter
     redis_connection = redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
