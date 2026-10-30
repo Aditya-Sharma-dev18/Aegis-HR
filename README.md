@@ -1,4 +1,4 @@
-# ✦ Aegis-HR — Agentic RAG Engine with Role-Based Access Control for Enterprise HR Intelligence   
+# ✦ Aegis-HR — Agentic RAG Engine with Role-Based Access Control for Enterprise HR Intelligence        
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
